@@ -1,10 +1,11 @@
 import sys, re
 from nemo_text_processing.text_normalization.normalize import Normalizer
 
+normalizer = Normalizer(input_case='cased', lang='en')
+
 #TODO: handle long parentheticals
 
 #Notes and lists that tend to appear at the end of an article and are not suitable for reading
-
 
 def remove_boring_end(text):
     dictionary = {"== Honors and awards ==" , "== Speeches and works ==","== Primary sources ==","== External links ==","== References ==","==Notes and References==","== See Also ==","== Honours ==","== Honors ==","== Gallery ==","== See also ==","== Further reading ==","== External links =="}
@@ -83,7 +84,8 @@ def preprocess (text):
 #    text = abbrev_remove (text)
 #    text = re.sub('#[0-9][0-9]*', ordinal_replace, text)
 #    text = re.sub('\$[0-9.]* ?[bmtz]illion', money_replace, text) 
-    sentences = gh_sentences (text)
+    sentences_in = gh_sentences (text)
+    sentences_out = []
     for sen in sentences:
-        
-    return text
+        sentences_out.append ( normalizer.normalize(sen, verbose=True, punct_post_process=True) )
+    return sentences_out
