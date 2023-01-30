@@ -23,6 +23,7 @@ To add more voices they have to be in 22050 Hz 32-bit float format. One can do t
 
 Most of what I'm doing is refining what happens in the text preprocessor to help the tts engine with things it does not say correctly by default. Eventually many of these may well be fixed by larger training sets, but for now I'm doing the simpler task of just making the text "easy to say", since tortoise does quite well saying things phonetically.  I recently added NVidia's [NeMo text processing](https://github.com/NVIDIA/NeMo-text-processing/) which may handle some of these.
 
+- [ ] Write a script that runs the text preprocessing and then the appropriate read.py command to tortoise on the resulting text file
 - [ ] Copy extra voices from this repo into the tortoise voices dir
 - [ ] Reduce repeats -- sometimes Tortoise "phrase stutters" saying the same few words two or three times. Have to tinker with TorToiSe params, see its [#237](https://github.com/neonbjb/tortoise-tts/issues/237)
 - [ ] Separate acronyms -- so it says FBI as F B I rather than Fubeye
