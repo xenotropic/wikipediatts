@@ -4,5 +4,6 @@ I'm using this with runpods.io.
 
 The initial command to your empty server (as sudo or root) is
 
-`git clone https://github.com/xenotropic/wikipedia-tts && ./wikipedia-tts/runpodinit.sh`
+cd /workspace && `git clone https://github.com/xenotropic/wikipedia-tts && ./wikipedia-tts/runpodinit.sh`
 
+Where /workspace is whatever directory you want your repos and models in.
