@@ -84,8 +84,8 @@ def preprocess (text):
 #    text = abbrev_remove (text)
 #    text = re.sub('#[0-9][0-9]*', ordinal_replace, text)
 #    text = re.sub('\$[0-9.]* ?[bmtz]illion', money_replace, text) 
-    sentences_in = gh_sentences (text)
+    sentences_in = gh_sentences (text) 
     sentences_out = []
-    for sen in sentences:
-        sentences_out.append ( normalizer.normalize(sen, verbose=True, punct_post_process=True) )
+    for sen in sentences_in:
+        sentences_out.append ( normalizer.normalize(sen, verbose=False, punct_post_process=True) )
     return sentences_out

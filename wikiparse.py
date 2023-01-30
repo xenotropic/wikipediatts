@@ -4,7 +4,7 @@ import preprocessor
 
 wikiurl = sys.argv[1]
 
-page = wikipedia.page(wikiurl)
+page = wikipedia.page(wikiurl, auto_suggest=False)
 title = re.sub ( "_", " ", wikiurl )
 stringtoread=page.content
 #print (stringtoread)
