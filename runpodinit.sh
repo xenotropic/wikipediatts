@@ -2,7 +2,7 @@
 #The intent here is to set up a server that can do the things the scripts require. I'm using runpod.io servers that already have pytorch installed 
 
 apt update
-apt --yes install libsndfile1-dev ffmpeg emacs python3.9-dev 
+apt --yes install libsndfile1-dev ffmpeg emacs python3.9-dev nq
 
 export BASEDIR=/workspace
 export TORTOISE_MODELS_DIR=$BASEDIR/models
