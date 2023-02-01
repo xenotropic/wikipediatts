@@ -1,11 +1,25 @@
 import sys, re
-from nemo_text_processing.text_normalization.normalize import Normalizer
 
+from nemo_text_processing.text_normalization.normalize import Normalizer
 normalizer = Normalizer(input_case='cased', lang='en')
 
 #TODO: handle long parentheticals
 
 #Notes and lists that tend to appear at the end of an article and are not suitable for reading
+
+pronounced = ['NASA','POTUS','SCOTUS','FLOTUS','WASP','UNICEF','AIDS','FOREX','GIF'];
+replace_acronyms = {
+    "JPG": "jaypeg",
+    "JPEG": "jaypeg",
+    "HVAC": "H vack",
+    "BBQ": "barbeque",
+    "MSDOS" : "M S dos",
+    "CD-ROM" : "C D rom",
+    "AAA" : "triple a",
+    "IEEE" : "I triple e",
+    "NATO": "Nayto"
+}
+
 
 def remove_boring_end(text):
     dictionary = {"== Honors and awards ==" , "== Speeches and works ==","== Primary sources ==","== External links ==","== References ==","==Notes and References==","== See Also ==","== Honours ==","== Honors ==","== Gallery ==","== See also ==","== Further reading ==","== External links =="}
@@ -79,13 +93,32 @@ def ordinal_replace(matchobj):
         suffix = ['th', 'st', 'nd', 'rd', 'th'][min(n % 10, 4)]
     return str(n) + suffix
 
+def acronym_split (matchobj):
+    text = matchobj.group(0)  
+    if text in pronounced: return text
+    if text in replace_acronyms: return replace_acronyms[text]
+    return " ".join(text)  # the default is split with spaces so each letter spoken see https://stackoverflow.com/a/18221460/
+
+def get_middle_comma (text): # for sentences that are still over 390 chars after splitting
+    commas = [ind for ind, ch in enumerate(text) if ch.lower() == ','];
+    if commas == []: return text
+    return commas [ len ( commas ) // 2 ]
+
+def normalize_local ( text ):
+    return  normalizer.normalize (text, verbose=False, punct_post_process=True)
+
 def preprocess (text):
     text = remove_boring_end (text)
+    text = re.sub ('[A-Z][A-Z]*', acronym_split, text)
 #    text = abbrev_remove (text)
 #    text = re.sub('#[0-9][0-9]*', ordinal_replace, text)
 #    text = re.sub('\$[0-9.]* ?[bmtz]illion', money_replace, text) 
     sentences_in = gh_sentences (text) 
     sentences_out = []
     for sen in sentences_in:
-        sentences_out.append ( normalizer.normalize(sen, verbose=False, punct_post_process=True) )
+        if ( len (sen) > 390 ):
+            middleish_comma = get_middle_comma ( sen )
+            sentences_out.append ( normalize_local ( text[:middleish_comma] ) )
+            sentences_out.append ( normalize_local ( text[middleish_comma+1:] ) )
+        else: sentences_out.append ( normalize_local  ( sen ) )        
     return sentences_out
