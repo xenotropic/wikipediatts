@@ -7,7 +7,7 @@ I'm using this with runpods.io, so the intent here is to set up and run on a tem
 
 The initial command to your empty server (as sudo or root) is
 
-`cd /workspace && git clone https://github.com/xenotropic/wikipedia-tts && ./wikipedia-tts/runpodinit.sh`
+`cd /workspace && git clone https://github.com/xenotropic/wikipedia-tts && source ./wikipedia-tts/runpodinit.sh`
 
 Where /workspace is whatever directory you want your repos and models in. If it is *not* /workspace also modify the BASEDIR set in runpodinit.sh before you run it. 
 
