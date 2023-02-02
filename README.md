@@ -1,5 +1,5 @@
 # wikipedia-tts
-Scripts gluing together TorToiSe with text preprocessing with the goal of getting clean audio readings of Wikipedia articles. Waaay alpha use with caution.
+Scripts gluing together TorToiSe with text preprocessing with the goal of getting clean audio readings of Wikipedia articles. Waaay alpha use with caution. You can listen to example outputs, as a podcast RSS feed, at https://morris.cloud/wikipedia-tts/ 
 
 ## Setup.
 
@@ -13,7 +13,7 @@ Where /notebooks is whatever directory you want your repos and models in. ("/not
 
 ## Voices. 
 
-The voices in the feed are based on [LibriTTS voices](https://www.openslr.org/60/). Althugh I may use a single voice in some articles in the podcast feed, eventually I will probably blend two or more voices, so they aren't the voice of any single person. 
+The voices in the feed are based on [LibriTTS voices](https://www.openslr.org/60/).  
  
 To add more voices they have to be in 22050 Hz 32-bit float format. One can do this with:
 
