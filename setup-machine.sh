@@ -16,3 +16,5 @@ python -m pip install git+https://github.com/NVIDIA/NeMo.git@main#egg=nemo_toolk
 cd tortoise-tts
 
 python -m pip install .
+
+cd $BASEDIR/wikipedia-tts
