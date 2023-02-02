@@ -1,7 +1,7 @@
 import sys, re
 
 from nemo_text_processing.text_normalization.normalize import Normalizer
-normalizer = Normalizer(input_case='cased', lang='en')
+normalizer = Normalizer(input_case='cased', lang='en', deterministic=False)
 
 #TODO: handle long parentheticals
 
@@ -17,7 +17,7 @@ replace_acronyms = {
     "CD-ROM" : "C D rom",
     "AAA" : "triple a",
     "IEEE" : "I triple e",
-    "NATO": "Nayto"
+    "NATO": "Nayto",
     "ASCII": "Askey"
 }
 
