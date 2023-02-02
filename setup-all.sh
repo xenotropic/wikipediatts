@@ -4,7 +4,6 @@
 apt update
 apt --yes install libsndfile1-dev ffmpeg emacs python3.9-dev nq less
 
-export BASEDIR=/notebooks
 export TORTOISE_MODELS_DIR=$BASEDIR/models
 export NQDIR=$BASEDIR/outputs
 cd $BASEDIR
