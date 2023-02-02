@@ -18,6 +18,7 @@ replace_acronyms = {
     "AAA" : "triple a",
     "IEEE" : "I triple e",
     "NATO": "Nayto"
+    "ASCII": "Askey"
 }
 
 
