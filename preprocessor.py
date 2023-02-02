@@ -116,9 +116,10 @@ def preprocess (text):
     sentences_in = gh_sentences (text) 
     sentences_out = []
     for sen in sentences_in:
+        #print ( "processing " + text + "\ n" )
         if ( len (sen) > 390 ):
             middleish_comma = get_middle_comma ( sen )
-            sentences_out.append ( normalize_local ( text[:middleish_comma] ) )
-            sentences_out.append ( normalize_local ( text[middleish_comma+1:] ) )
+            sentences_out.append ( normalize_local ( sen[:middleish_comma] ) )
+            sentences_out.append ( normalize_local ( sen[middleish_comma+1:] ) )
         else: sentences_out.append ( normalize_local  ( sen ) )        
     return sentences_out
