@@ -109,13 +109,14 @@ def normalize_local ( text ):
 
 def preprocess (text):
     text = remove_boring_end (text)
-    text = re.sub ('[A-Z][A-Z]*', acronym_split, text)
+
 #    text = abbrev_remove (text)
 #    text = re.sub('#[0-9][0-9]*', ordinal_replace, text)
 #    text = re.sub('\$[0-9.]* ?[bmtz]illion', money_replace, text) 
     sentences_in = gh_sentences (text) 
     sentences_out = []
     for sen in sentences_in:
+        sen = re.sub ('[A-Z][A-Z]*', acronym_split, sen)
         #print ( "processing " + text + "\ n" )
         if ( len (sen) > 390 ):
             middleish_comma = get_middle_comma ( sen )
