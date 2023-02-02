@@ -34,5 +34,6 @@ Most of what I'm doing is making scripts that set up a new machine like one gets
 - [ ] % to "percent"
 - [ ] Remove footnotes -- most are being omitted by virtue of being in brackets (which Tortose ignores) but pincites to pages are outside of the brackets; might as well remove them all
 - [ ] Remove brackets in quotes -- this is a common pattern to "fix" a quotation so it is readable out of its context, but then tortoise skips the bracketed text which is bad
+- [ ] Strip initial phonetic spelling if present, or ensure not expanded as an acronym
 - [ ] Country pronouciation -- Tortoise does not know how to say country names reliably, so like Czechoslovakia and Argentina don't come out right. Its training set was on out-of-copyright books so it's a large body of words it is not familiar with. 
 
