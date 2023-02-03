@@ -1,9 +1,9 @@
 # wikipedia-tts
-Scripts gluing together TorToiSe with text preprocessing with the goal of getting clean audio readings of Wikipedia articles. Waaay alpha use with caution. You can listen to example outputs, as a podcast RSS feed, at https://morris.cloud/wikipedia-tts/ 
+Scripts gluing together [TorToiSe](https://github.com/neonbjb/tortoise-tts) with [Nvidia's NeMo](https://github.com/NVIDIA/NeMo-text-processing) and other text preprocessing with the goal of getting clean audio readings of Wikipedia articles. You can listen to example outputs, as a podcast RSS feed, at https://morris.cloud/wikipedia-tts/ . Theoretically they should be getting better over time, as I improve the text preprocessing pipeline. 
 
 ## Setup.
 
-I'm using this with runpods.io, so the intent here is to set up and run on a temporary machine with root access. 
+TorToiSe requires an Nvidia GPU, and in my experience it needs one with 16GB of RAM to run reliably. I'm using this with paperspace gradient, so the intent here is to set up and run on a temporary machine with root access. If you are installing this on your own personal machine, there are apt install commands in the setup, but you might want to review first, and you will have to use su. 
 
 The initial command to your empty server (as sudo or root) is
 
@@ -11,9 +11,34 @@ The initial command to your empty server (as sudo or root) is
 
 Where /notebooks is whatever directory you want your repos and models in. ("/notebooks" happens to be what paperspace uses) 
 
+setup-machine.sh  is for where the machine has been stopped and started again (i.e., apt and pip dependencies lost), but where the contents of $BASEDIR were preserved. 
+
+## Rendering Articles. 
+
+Currently article rendering is in two stages, with some human intervention advised in between. Both take one argument, which is the title of the article as it appears in the URL: 
+
+`textprep.sh` prepares the text and places it in the $BASEDIR/input directory. Watch for any over-length sentences, these need to be further broken up with a pipe symbol | . You may wish to also do other text processing by hand: removing non-Roman characters; replacing unusual words that are not pronounced the way they appear, with a phonetic spelling; making sure that all number ranges are rendered correctly, and scientific units.
+
+`readtext.sh` sends the text off to TorToiSe's read.py function with various parameters set. 
+
+So if you wanted to generate a reading of  the Wikipedia article on Barack Obama, you'd run
+
+`textprep.sh Barack_Obama`
+
+then you'd edit $BASEDIR/inputs/Barack_Obama/Barack_Obama.txt with yor favorite text editor, then run
+
+`readtext.sh Barack_Obama`
+
+If a run is completed, you get "complete.wav", which is the output. 
+
+If a run is interrupted, then you are left with a bunch of .wav files, one per sentence. I use leadingzeroes.sh to add leading zeroes to them so the shell gives them in order; then run "sox *.wav complete.wav" to get a file with them altogether. Then 
+`ffmpeg -i complete.wav [outputfile].mp3" to get an mp3.
+
+The goal is to get the text preprocessing good enough that the intermediate step of human editing isn't necessary.
+
 ## Voices. 
 
-The voices in the feed are based on [LibriTTS voices](https://www.openslr.org/60/).  
+The voices in this repo, and in the feed are from [LibriTTS voices](https://www.openslr.org/60/).  
  
 To add more voices they have to be in 22050 Hz 32-bit float format. One can do this with:
 
