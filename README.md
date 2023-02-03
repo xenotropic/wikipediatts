@@ -29,7 +29,7 @@ then you'd edit $BASEDIR/inputs/Barack_Obama/Barack_Obama.txt with yor favorite 
 
 `readtext.sh Barack_Obama`
 
-If a run is completed, you get "complete.wav", which is the output. 
+If a run is completed, you get "complete.wav", which is the output, in a subdirectory of $BASEDIR/outputs. 
 
 If a run is interrupted, then you are left with a bunch of .wav files, one per sentence. I use leadingzeroes.sh to add leading zeroes to them so the shell gives them in order; then run "sox *.wav complete.wav" to get a file with them altogether. Then 
 `ffmpeg -i complete.wav [outputfile].mp3" to get an mp3.
