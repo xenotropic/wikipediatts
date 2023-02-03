@@ -23,4 +23,4 @@ cd tortoise-tts
 python -m pip install .
 
 cd models
-wget `../models.txt`
+wget `../wikipedia-tts/models.txt`
