@@ -2,7 +2,7 @@
 #The intent here is to set up a server that can do the things the scripts require. I'm using runpod.io servers that already have pytorch installed; they use /workspace as a root working directory. Change BASEDIR as appropriate or your setup. 
 
 apt update
-apt --yes install libsndfile1-dev ffmpeg emacs python3.9-dev nq less
+apt --yes install libsndfile1-dev ffmpeg emacs python3.9-dev nq less sox
 
 export TORTOISE_MODELS_DIR=$BASEDIR/models
 export NQDIR=$BASEDIR/outputs
