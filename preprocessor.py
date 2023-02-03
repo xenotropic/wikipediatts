@@ -1,7 +1,7 @@
 import sys, re
 
 from nemo_text_processing.text_normalization.normalize import Normalizer
-normalizer = Normalizer(input_case='cased', lang='en', deterministic=False)
+normalizer = Normalizer(input_case='cased', lang='en' )
 
 #TODO: handle long parentheticals
 
