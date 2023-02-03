@@ -9,12 +9,12 @@ export TORTOISE_MODELS_DIR=$BASEDIR/models
 export NQDIR=$BASEDIR/outputs
 cd $BASEDIR
 
-python -m pip install -r tortoise-tts/requirements.txt
-python -m pip install wikipedia Cython pynini
-python -m pip install git+https://github.com/NVIDIA/NeMo.git@main#egg=nemo_toolkit[nlp]
+python -m pip install --cache-dir $BASEDIR/models -r tortoise-tts/requirements.txt
+python -m pip install --cache-dir $BASEDIR/models wikipedia Cython pynini
+python -m pip install --cache-dir $BASEDIR/models git+https://github.com/NVIDIA/NeMo.git@main#egg=nemo_toolkit[nlp]
 
 cd tortoise-tts
 
-python -m pip install .
+python -m pip install --cache-dir $BASEDIR/models  .
 
 cd $BASEDIR/wikipedia-tts
