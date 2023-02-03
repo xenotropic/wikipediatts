@@ -19,4 +19,6 @@ for sen in sentences:
     tokenstring+=sen + "| "
     if (len(sen) > 390): print ("******ERROR: string over 390 characters: " + sen + "\n", file=sys.stderr )
 
+tokenstring+="This concludes the Wikipedia article on " + title
+
 print ( tokenstring )
