@@ -1,5 +1,5 @@
 # wikipedia-tts
-Scripts gluing together [TorToiSe](https://github.com/neonbjb/tortoise-tts) with [Nvidia's NeMo](https://github.com/NVIDIA/NeMo-text-processing) and other text preprocessing with the goal of getting clean audio readings of Wikipedia articles. You can listen to example outputs, as a podcast RSS feed, at https://morris.cloud/wikipedia-tts/ . Theoretically they should be getting better over time, as I improve the text preprocessing pipeline. 
+Scripts gluing together the [TorToiSe](https://github.com/neonbjb/tortoise-tts) text to speech engine with [Nvidia's NeMo](https://github.com/NVIDIA/NeMo-text-processing) and other text preprocessing with the goal of getting clean audio readings of Wikipedia articles. You can listen to example outputs, as a podcast RSS feed, at https://wcast.me . Theoretically they should be getting better over time, as I improve the text preprocessing pipeline. 
 
 ## Setup.
 
