@@ -3,7 +3,7 @@ Scripts gluing together the [TorToiSe](https://github.com/neonbjb/tortoise-tts) 
 
 ## Setup.
 
-TorToiSe requires an Nvidia GPU, and in my experience it needs one with 16GB of RAM to run reliably. I'm using this with paperspace gradient, so the intent here is to set up and run on a temporary machine with root access. If you are installing this on your own personal machine, there are apt install commands in the setup, but you might want to review first, and you will have to use su. 
+TorToiSe requires an Nvidia GPU, and in my experience it needs one with 16GB of RAM to run reliably. I'm using this with paperspace gradient, so the intent here is to set up and run on a temporary machine with root access. If you are installing this on your own personal machine, there are apt install commands in the setup, but you might want to review first, and you will have to use sudo. You may also then want to run the commands in setup-all.sh separately so you run as your own sudo user, and like sudo doesn't work with source since it is a built-in command. This command is meant when you are operating as root (as is often the case on temporary machines -- tested on Paperspace in particular).
 
 The initial command to your empty server (as sudo or root) is
 
