@@ -1,7 +1,8 @@
 import sys, re
+from unidecode import unidecode
 
-from nemo_text_processing.text_normalization.normalize import Normalizer
-normalizer = Normalizer(input_case='cased', lang='en' )
+#from nemo_text_processing.text_normalization.normalize import Normalizer
+#normalizer = Normalizer(input_case='cased', lang='en' )
 
 #TODO: handle long parentheticals
 
@@ -105,15 +106,46 @@ def get_middle_comma (text): # for sentences that are still over 390 chars after
     if commas == []: return text
     return commas [ len ( commas ) // 2 ]
 
+def date_ranges (matchobj):
+    text = matchobj.group(0)
+    text = text.replace("(","from ")
+    text = text.replace(")"," ")
+    text = text.replace("-"," to ")
+    text = text.replace("—"," to ")
+    return text
+   
+def number_ranges (matchobj):
+    text = matchobj.group(0)
+    text = text.replace("-"," to ")
+    text = text.replace("—"," to ")
+    return text
+    
+#Taking out Nemo for now, it is slow, dependencies are difficult
 def normalize_local ( text ):
-    return  normalizer.normalize (text, verbose=False, punct_post_process=True)
+#    return  normalizer.normalize (text, verbose=False, punct_post_process=True)
+    return  text
+
+def spell_out_units ( matchobj ):
+    text = matchobj.group(0)
+    length_dict = {"km": "kilometers",
+               "m": "meters",
+               "cm": "centimeters",
+               "mm": "millimeters",
+               "mi": "miles"}
+    for key, value in length_dict.items():
+        text = text.replace(key, value)
+    return text
 
 def preprocess (text):
     text = remove_boring_end (text)
-
-#    text = abbrev_remove (text)
-#    text = re.sub('#[0-9][0-9]*', ordinal_replace, text)
-#    text = re.sub('\$[0-9.]* ?[bmtz]illion', money_replace, text) 
+    text = unidecode (text)
+    text = abbrev_remove (text)
+    text = re.sub('#[0-9][0-9]*', ordinal_replace, text)
+    text = re.sub('\$[0-9.]* ?[bmtz]illion', money_replace, text)
+    text = re.sub('\([0-9][0-9]?[0-9]?[0-9]?[ADBC ]*[-—][0-9][0-9]?[0-9]?[0-9]?[ADBC ]*\)', date_ranges, text) 
+    text = re.sub('[,0-9]+[-][0-9,]+', number_ranges, text)
+    text = re.sub('\(Coordinates:[^)]+\)', '', text)
+    text = re.sub('\d+\s*(m|cm|mm|km|ft|in)', spell_out_units, text)
     sentences_in = gh_sentences (text) 
     sentences_out = []
     for sen in sentences_in:
