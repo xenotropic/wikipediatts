@@ -19,12 +19,12 @@ replace_acronyms = {
     "AAA" : "triple a",
     "IEEE" : "I triple e",
     "NATO": "Nayto",
-    "ASCII": "Askey"
+    "ASCII": "Askey",
+    "COINTELPRO": "Co intel pro"
 }
 
-
 def remove_boring_end(text):
-    dictionary = {"== Honors and awards ==" , "== Speeches and works ==","== Primary sources ==","== External links ==","== References ==","==Notes and References==","== See Also ==","== Honours ==","== Honors ==","== Gallery ==","== See also ==","== Further reading ==","== External links =="}
+    dictionary = {"== Honors and awards ==" , "== Speeches and works ==","== Primary sources ==","== External links ==","== References ==","==Notes and References==","== See Also ==","== Honours ==","== Honors ==","== Gallery ==","== See also ==","== Further reading ==","== External links ==","== Works= ="}
     positions=[len(text)]
     for ending in dictionary:
         pos = text.find (ending)
@@ -40,7 +40,7 @@ def money_replace(matchobj):
 
 # spell out common abbreviations
 def abbrev_remove (text):
-    dictionary = {"Mr.":"Mister", "St.":"Street","Mrs.":"Missus","Ms.":"Miz","Dr.":"Doctor","Prof.":"Professor","Capt.":"Captain", "Dr.":"Drive" ,  "Ave.":"Avenue" , "Blvd.":"Boulevard", "Gen.":"General", " km/h":" kilometers per hour", " kmh": " kilometers per hour", "±":"plus or minus", " km":" kilometers" }
+    dictionary = {"...":"-","Rt.Rev":"Right Reverend", "Sr.":"Senior", "Jr.":"junior","Mr.":"Mister", "St.":"Street","Mrs.":"Missus","Ms.":"Miz","Dr.":"Doctor","Prof.":"Professor","Capt.":"Captain", "Dr.":"Drive" ,  "Ave.":"Avenue" , "Blvd.":"Boulevard", "Gen.":"General", " km/h":" kilometers per hour", " kmh": " kilometers per hour", "±":"plus or minus", " km":" kilometers" }
     for key in dictionary.keys():
         text = text.replace(key, dictionary[key])
     return text
@@ -57,8 +57,9 @@ digits = "([0-9])"
 
 def gh_sentences(text):
     text = " " + text + "  "
-    text = re.sub('==*', '-', text) # wikipedia headers
+    text = re.sub('==*', '.', text) # wikipedia headers
     text = text.replace("\n"," ")
+    text = text.replace("-"," ")
     text = re.sub(prefixes,"\\1<prd>",text)
     text = re.sub(websites,"<prd>\\1",text)
     text = re.sub(digits + "[.]" + digits,"\\1<prd>\\2",text)
@@ -78,7 +79,8 @@ def gh_sentences(text):
     text = text.replace(".",".<stop>")
     text = text.replace("?","?<stop>")
     text = text.replace("!","!<stop>")
-    text = text.replace(":",":<stop>")
+    text = text.replace(": ",":<stop>")
+    text = text.replace(";",";<stop>")
     text = text.replace("<prd>",".")
     sentences = text.split("<stop>")
     sentences = sentences[:-1]
@@ -127,30 +129,86 @@ def normalize_local ( text ):
 
 def spell_out_units ( matchobj ):
     text = matchobj.group(0)
-    length_dict = {"km": "kilometers",
-               "m": "meters",
-               "cm": "centimeters",
-               "mm": "millimeters",
-               "mi": "miles"}
+    length_dict = {"km2": "square kilometers",
+                   "m2": "square meters",
+                   "sq mi": "square miles",
+                   "km": "kilometers",
+                   "mm": "millimeters",
+                   "cm": "centimeters",
+                   "ft": "feet",
+                   "in": "inches",
+                   "lbs": "pounds",
+                   "lb": "pounds",
+                   "kg": "kilograms",
+                   "mi": "miles",
+                   "m": "meters",
+                   "yd": "yards",
+                   "%":" percent"
+                   }
     for key, value in length_dict.items():
-        text = text.replace(key, value)
+        if ( key in text):
+            return text.replace(key, value) # don't want to do more than on to avoid metersmiles
+    return text
+
+def birth_death_dates ( matchobj ):
+    text = matchobj.group(0)
+    text = text.replace("b."," who was born in ")
+    text = text.replace("d."," who died in ")
+    text = text.replace(")","")
+    text = text.replace("(","")
+    return text
+
+#since there will be a lot of these
+def replace_decimal_points ( matchobj ):
+    text = matchobj.group(0)
+    text = re.sub(r'(\d)[.](\d)', r'\1 point \2', text)
+    return text
+
+#since there will be a lot of these
+def fractions ( matchobj ):
+    text = matchobj.group(0)
+    text = text.replace("+"," and ")
+    text = re.sub(r'1[/]2', r' one half ', text)    
+    text = re.sub(r'(\d)[/]4', r'\1 quarters ', text)    
+    text = re.sub(r'(\d)[/]8', r'\1 eighths ', text)    
+    text = re.sub(r'(\d)[/]16', r'\1 sixtennths ', text)    
+    text = re.sub(r'(\d)[/]32', r'\1 thirty seconds ', text)    
+    text = re.sub(r'(\d)[/]64', r'\1 sixth fourths ', text)    
+    return text
+
+#since there will be a lot of these
+def template_method ( matchobj ):
+    text = matchobj.group(0)
     return text
 
 def preprocess (text):
     text = remove_boring_end (text)
+    text = text.replace("\u2212","minus ")
+    text = text.replace("\u2014","-")
     text = unidecode (text)
-    text = abbrev_remove (text)
+    text = text.replace("degF"," degrees fahrenheit " )
+    text = text.replace("degC"," degrees celsius ")  
+    text = abbrev_remove (text) 
+    text = text.replace("--","-")
+    text = re.sub('\([bd][.] ?[0-9]+\)', birth_death_dates, text)
     text = re.sub('#[0-9][0-9]*', ordinal_replace, text)
     text = re.sub('\$[0-9.]* ?[bmtz]illion', money_replace, text)
-    text = re.sub('\([0-9][0-9]?[0-9]?[0-9]?[ADBC ]*[-—][0-9][0-9]?[0-9]?[0-9]?[ADBC ]*\)', date_ranges, text) 
+    text = re.sub('\([0-9][0-9]?[0-9]?[0-9]?[ADBC ]*[-][0-9][0-9]?[0-9]?[0-9]?[ADBC ]*\)', date_ranges, text) 
+    text = re.sub('(\d)[-](\d)', r'\1 to \2' , text) #number ranges, maybe I don't need the method below
     text = re.sub('[,0-9]+[-][0-9,]+', number_ranges, text)
     text = re.sub('\(Coordinates:[^)]+\)', '', text)
-    text = re.sub('\d+\s*(m|cm|mm|km|ft|in)', spell_out_units, text)
+    text = re.sub('\d+\s*\d*\s*(m|m2|km|km2|ft|in|lb|lbs|kg|ha|sq mi|cm|mm|km|ft|in|yd|%)\W', spell_out_units, text)
+    text = re.sub('\d+\s*to \d+\s*(m|m2|km|km2|ft|in|lb|lbs|kg|ha|sq mi|cm|mm|km|ft|in|yd|%)\W', spell_out_units, text)
+    text = text.replace("kilometers2","square kilometers") # not sure why above doesn't catch this, kluge
+    text = re.sub('[+]?\d\d?/\d+', fractions, text) 
+    text = re.sub('[,0-9.]+', replace_decimal_points, text)
     sentences_in = gh_sentences (text) 
     sentences_out = []
     for sen in sentences_in:
         sen = re.sub ('[A-Z][A-Z]*', acronym_split, sen)
-        #print ( "processing " + text + "\ n" )
+        sen = sen.replace("."," ") # this are going to be stuff like degrees, initials, etc at this point
+        sen = sen.replace("/"," ") 
+        if ( len (sen) < 2 ): continue #these are stubs often just a period
         if ( len (sen) > 390 ):
             middleish_comma = get_middle_comma ( sen )
             sentences_out.append ( normalize_local ( sen[:middleish_comma] ) )
