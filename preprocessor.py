@@ -1,30 +1,30 @@
-import sys, re
+import sys, re, csv, os
 from unidecode import unidecode
 
-#from nemo_text_processing.text_normalization.normalize import Normalizer
-#normalizer = Normalizer(input_case='cased', lang='en' )
+nemo_on = False #often skip this for debugging because it is slow
+#nemo_on = True
+
+from nemo_text_processing.text_normalization.normalize import Normalizer
+normalizer = None
+if nemo_on:
+    normalizer = Normalizer(input_case='cased', lang='en' )
 
 #TODO: handle long parentheticals
 
 #Notes and lists that tend to appear at the end of an article and are not suitable for reading
 
-pronounced = ['NASA','POTUS','SCOTUS','FLOTUS','WASP','UNICEF','AIDS','FOREX','GIF'];
-replace_acronyms = {
-    "JPG": "jaypeg",
-    "JPEG": "jaypeg",
-    "HVAC": "H vack",
-    "BBQ": "barbeque",
-    "MSDOS" : "M S dos",
-    "CD-ROM" : "C D rom",
-    "AAA" : "triple a",
-    "IEEE" : "I triple e",
-    "NATO": "Nayto",
-    "ASCII": "Askey",
-    "COINTELPRO": "Co intel pro"
-}
+def csv_to_dict(csv_file):
+    csv_file_exp = os.path.expandvars(csv_file)
+    with open(csv_file_exp, mode='r') as infile:
+        reader = csv.reader(infile)
+        mydict = {rows[0]:rows[1] for rows in reader}
+    return mydict
+
+replace_acronyms = csv_to_dict ("$BASEDIR/wikipedia-tts/pronounced_acronyms.csv") 
+bulk_replace_dict = csv_to_dict ("$BASEDIR/wikipedia-tts/bulk_replace.csv") # long context-independent strings 
 
 def remove_boring_end(text):
-    dictionary = {"== Honors and awards ==" , "== Speeches and works ==","== Primary sources ==","== External links ==","== References ==","==Notes and References==","== See Also ==","== Honours ==","== Honors ==","== Gallery ==","== See also ==","== Further reading ==","== External links ==","== Works= ="}
+    dictionary = {"== Books ==", "== Honors and awards ==" , "== Bibliography ==" , "== Speeches and works ==","== Primary sources ==","== External links ==","== References ==","==Notes and References==","== See Also ==","== Honours ==","== Honors ==","== Gallery ==","== See also ==","== Further reading ==","== External links ==","== Works= ="}
     positions=[len(text)]
     for ending in dictionary:
         pos = text.find (ending)
@@ -38,11 +38,10 @@ def money_replace(matchobj):
     moneystr = matchobj.group(0)[1:] # string slice off $
     return moneystr + " dollars "
 
-# spell out common abbreviations
-def abbrev_remove (text):
-    dictionary = {"...":"-","Rt.Rev":"Right Reverend", "Sr.":"Senior", "Jr.":"junior","Mr.":"Mister", "St.":"Street","Mrs.":"Missus","Ms.":"Miz","Dr.":"Doctor","Prof.":"Professor","Capt.":"Captain", "Dr.":"Drive" ,  "Ave.":"Avenue" , "Blvd.":"Boulevard", "Gen.":"General", " km/h":" kilometers per hour", " kmh": " kilometers per hour", "±":"plus or minus", " km":" kilometers" }
-    for key in dictionary.keys():
-        text = text.replace(key, dictionary[key])
+# things that can be bulk replaced, don't require regex or other context
+def bulk_replace (text):
+    for key in bulk_replace_dict.keys():
+        text = text.replace(key, bulk_replace_dict[key])
     return text
 
 # This method from stack exchange https://stackoverflow.com/a/31505798/720763 CC-BY-SA-4.0
@@ -99,7 +98,6 @@ def ordinal_replace(matchobj):
 
 def acronym_split (matchobj):
     text = matchobj.group(0)  
-    if text in pronounced: return text
     if text in replace_acronyms: return replace_acronyms[text]
     return " ".join(text)  # the default is split with spaces so each letter spoken see https://stackoverflow.com/a/18221460/
 
@@ -124,24 +122,30 @@ def number_ranges (matchobj):
     
 #Taking out Nemo for now, it is slow, dependencies are difficult
 def normalize_local ( text ):
-#    return  normalizer.normalize (text, verbose=False, punct_post_process=True)
-    return  text
+    if nemo_on:
+        return  normalizer.normalize (text, verbose=False, punct_post_process=True)
+    else:
+        return  text
 
 def spell_out_units ( matchobj ):
     text = matchobj.group(0)
     length_dict = {"km2": "square kilometers",
+                   "mm2": "square millimeters",
                    "m2": "square meters",
                    "sq mi": "square miles",
                    "km": "kilometers",
                    "mm": "millimeters",
                    "cm": "centimeters",
+                   "nm": "nanometers",
                    "ft": "feet",
-                   "in": "inches",
+                   "in)": "inches)", #  false positives without parens
                    "lbs": "pounds",
                    "lb": "pounds",
                    "kg": "kilograms",
+                   "g": "grams",
                    "mi": "miles",
                    "m": "meters",
+                   "oz": "ounces",
                    "yd": "yards",
                    "%":" percent"
                    }
@@ -181,6 +185,12 @@ def template_method ( matchobj ):
     text = matchobj.group(0)
     return text
 
+#since there will be a lot of these
+def circas ( matchobj ):
+    text = matchobj.group(0)
+    text = text.replace("c."," sirka ")
+    return text
+
 def preprocess (text):
     text = remove_boring_end (text)
     text = text.replace("\u2212","minus ")
@@ -188,8 +198,10 @@ def preprocess (text):
     text = unidecode (text)
     text = text.replace("degF"," degrees fahrenheit " )
     text = text.replace("degC"," degrees celsius ")  
-    text = abbrev_remove (text) 
+    text = bulk_replace (text) 
     text = text.replace("--","-")
+    text = re.sub(']:[0-9]+-[0-9]+', ']', text)  # Wikipedia pincites
+    text = re.sub('[( -]c[.] ?[0-9]+', circas, text)
     text = re.sub('\([bd][.] ?[0-9]+\)', birth_death_dates, text)
     text = re.sub('#[0-9][0-9]*', ordinal_replace, text)
     text = re.sub('\$[0-9.]* ?[bmtz]illion', money_replace, text)
@@ -197,9 +209,10 @@ def preprocess (text):
     text = re.sub('(\d)[-](\d)', r'\1 to \2' , text) #number ranges, maybe I don't need the method below
     text = re.sub('[,0-9]+[-][0-9,]+', number_ranges, text)
     text = re.sub('\(Coordinates:[^)]+\)', '', text)
-    text = re.sub('\d+\s*\d*\s*(m|m2|km|km2|ft|in|lb|lbs|kg|ha|sq mi|cm|mm|km|ft|in|yd|%)\W', spell_out_units, text)
-    text = re.sub('\d+\s*to \d+\s*(m|m2|km|km2|ft|in|lb|lbs|kg|ha|sq mi|cm|mm|km|ft|in|yd|%)\W', spell_out_units, text)
+    text = re.sub('\d+\s*\d*\s*(m|m2|km|km2|mm2|ft|in|lb|lbs|g|kg|ha|sq mi|cm|mm|nm|km|ft|in|yd|oz|%)\W', spell_out_units, text)
+    text = re.sub('\d+\s*to \d+\s*(m|m2|km|km2|mm2|ft|in|lb|lbs|g|kg|ha|sq mi|cm|mm|nm|km|ft|in|yd|oz|%)\W', spell_out_units, text)
     text = text.replace("kilometers2","square kilometers") # not sure why above doesn't catch this, kluge
+    text = text.replace("mm2","square millimeters") # seems safe? pretty unique string
     text = re.sub('[+]?\d\d?/\d+', fractions, text) 
     text = re.sub('[,0-9.]+', replace_decimal_points, text)
     sentences_in = gh_sentences (text) 
@@ -208,6 +221,8 @@ def preprocess (text):
         sen = re.sub ('[A-Z][A-Z]*', acronym_split, sen)
         sen = sen.replace("."," ") # this are going to be stuff like degrees, initials, etc at this point
         sen = sen.replace("/"," ") 
+        sen = sen.replace("+"," ") 
+        sen = sen.replace("*"," ") 
         if ( len (sen) < 2 ): continue #these are stubs often just a period
         if ( len (sen) > 390 ):
             middleish_comma = get_middle_comma ( sen )
