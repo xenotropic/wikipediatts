@@ -1,8 +1,8 @@
 import sys, re, csv, os
 from unidecode import unidecode
 
-nemo_on = False #often skip this for debugging because it is slow
-#nemo_on = True
+nemo_on = True #often skip this for debugging because it is slow
+
 
 from nemo_text_processing.text_normalization.normalize import Normalizer
 normalizer = None
@@ -23,8 +23,26 @@ def csv_to_dict(csv_file):
 replace_acronyms = csv_to_dict ("$BASEDIR/wikipedia-tts/pronounced_acronyms.csv") 
 bulk_replace_dict = csv_to_dict ("$BASEDIR/wikipedia-tts/bulk_replace.csv") # long context-independent strings 
 
+def do_headings (text):
+    lines = text.splitlines()
+    heading_pattern = r'^==[^=]+==$'
+    subheading_pattern = r'^==='
+    heading_counter = 1
+    output = ""
+    for line in lines:
+        if re.match (heading_pattern, line):
+            output = output + "==" + "[Announcing] Main heading " + str (heading_counter) + ", "  +  line[2:] + " .\n"
+            heading_counter += 1
+        elif re.match (subheading_pattern, line):
+            index = 0  # could be three or four depending on level
+            while index < len(line) and line[index] == '=':
+                index += 1
+            output = output + line[:index] + "[Announcing] Subheading, "+ line[index:] + " .\n"
+        else: output = output + line + "\n"
+    return output
+
 def remove_boring_end(text):
-    dictionary = {"== Books ==", "== Honors and awards ==" , "== Bibliography ==" , "== Speeches and works ==","== Primary sources ==","== External links ==","== References ==","==Notes and References==","== See Also ==","== Honours ==","== Honors ==","== Gallery ==","== See also ==","== Further reading ==","== External links ==","== Works= ="}
+    dictionary = {"== Books ==", "== Honors and awards ==" , "== Bibliography ==" , "== Speeches and works ==","== Primary sources ==","== External links ==","== References ==","== Notes and References ==","== See Also ==","== Honours ==","== Honors ==","== Gallery ==","== See also ==","== Further reading ==","== External links ==","== Works= ="}
     positions=[len(text)]
     for ending in dictionary:
         pos = text.find (ending)
@@ -57,7 +75,7 @@ digits = "([0-9])"
 def gh_sentences(text):
     text = " " + text + "  "
     text = re.sub('==*', '.', text) # wikipedia headers
-    text = text.replace("\n"," ")
+    text = text.replace("\n",".")
     text = text.replace("-"," ")
     text = re.sub(prefixes,"\\1<prd>",text)
     text = re.sub(websites,"<prd>\\1",text)
@@ -101,10 +119,36 @@ def acronym_split (matchobj):
     if text in replace_acronyms: return replace_acronyms[text]
     return " ".join(text)  # the default is split with spaces so each letter spoken see https://stackoverflow.com/a/18221460/
 
+def get_middle_comma (sentence):
+    if len (sentence) ==0: return 0
+    comma_indices = [i for i, char in enumerate(sentence) if char == ',']
+    space_indices = [i for i, char in enumerate(sentence) if char == ' ']
+
+    middle_index = len(sentence) // 2
+    nearest_comma_index = None
+    
+    # Find the nearest comma that is not in the middle of a number
+    for index in comma_indices:
+        if not (index == 0 ) and not (index > ( len (sentence) - 2 )):
+            if not sentence[index-1].isdigit() and not sentence[index+1].isdigit():
+                if nearest_comma_index is None or abs(index - middle_index) < abs(nearest_comma_index - middle_index):
+                    nearest_comma_index = index
+
+    # If no valid comma is found, find the nearest space
+    if nearest_comma_index is None:
+        nearest_space_index = min(space_indices, key=lambda x: abs(x - middle_index))
+        return nearest_space_index
+
+    return nearest_comma_index
+
+'''
 def get_middle_comma (text): # for sentences that are still over 390 chars after splitting
     commas = [ind for ind, ch in enumerate(text) if ch.lower() == ','];
-    if commas == []: return text
-    return commas [ len ( commas ) // 2 ]
+    if commas == []:
+        commas = [ind for ind, ch in enumerate(text) if ch.lower() == ' '];
+    comma_candidate = commas [ len ( commas ) // 2 ]
+    return 
+'''
 
 def date_ranges (matchobj):
     text = matchobj.group(0)
@@ -180,27 +224,44 @@ def fractions ( matchobj ):
     text = re.sub(r'(\d)[/]64', r'\1 sixth fourths ', text)    
     return text
 
-#since there will be a lot of these
-def template_method ( matchobj ):
-    text = matchobj.group(0)
-    return text
-
-#since there will be a lot of these
 def circas ( matchobj ):
     text = matchobj.group(0)
     text = text.replace("c."," sirka ")
     return text
 
+def clause_split ( matchobj ):
+    text = matchobj.group(0)
+    text = text.replace(",",".")
+    return text
+
+#since there will be a lot of these
+def template_method ( matchobj ):
+    text = matchobj.group(0)
+    return text
+
+
 def preprocess (text):
     text = remove_boring_end (text)
+    text = re.sub('{.*?\}', '', text) #curly brace formatting
+    text = do_headings (text)
     text = text.replace("\u2212","minus ")
     text = text.replace("\u2014","-")
+    text = text.replace("{","")
+    text = text.replace("}","")
+    text = text.replace("–","-")
+    text = text.replace("–","-")
+    text = text.replace(" "," ")
+    text = bulk_replace (text) 
+    #print ( text, file=sys.stderr )
+    text = re.sub(': ?[0-9]+-[0-9]+', '', text)  # Wikipedia pincites
+    text = re.sub(':[ ]?[0-9]+', '', text)  # Wikipedia pincites
     text = unidecode (text)
     text = text.replace("degF"," degrees fahrenheit " )
     text = text.replace("degC"," degrees celsius ")  
-    text = bulk_replace (text) 
     text = text.replace("--","-")
-    text = re.sub(']:[0-9]+-[0-9]+', ']', text)  # Wikipedia pincites
+    text = text.replace("[[","")
+    text = text.replace("]]","")
+    text = re.sub(',[ ]?(from|as well as|during|so|and|or|because|such|including|but|that|whereas|where|when|with|whether|for example|rather|although|who|in which|which)', clause_split, text)
     text = re.sub('[( -]c[.] ?[0-9]+', circas, text)
     text = re.sub('\([bd][.] ?[0-9]+\)', birth_death_dates, text)
     text = re.sub('#[0-9][0-9]*', ordinal_replace, text)
@@ -220,11 +281,18 @@ def preprocess (text):
     for sen in sentences_in:
         sen = re.sub ('[A-Z][A-Z]*', acronym_split, sen)
         sen = sen.replace("."," ") # this are going to be stuff like degrees, initials, etc at this point
+        sen = sen.replace(":"," ") # colons and semicolons were already used to do sentence breaks 
+        sen = sen.replace(";"," ") 
         sen = sen.replace("/"," ") 
         sen = sen.replace("+"," ") 
-        sen = sen.replace("*"," ") 
-        if ( len (sen) < 2 ): continue #these are stubs often just a period
-        if ( len (sen) > 390 ):
+        sen = sen.replace("*"," ")
+        sen = sen.replace("(",",") # tortoise seems to pause more for commas than parens
+        sen = sen.replace(")",",")
+        sen = sen.replace(",,",",")
+        sen = sen.replace(" ,",", ")
+        sen = sen.strip()
+        if ( len (sen) < 3 ): continue #these are stubs often just a period
+        if ( len (sen) > 320 ):
             middleish_comma = get_middle_comma ( sen )
             sentences_out.append ( normalize_local ( sen[:middleish_comma] ) )
             sentences_out.append ( normalize_local ( sen[middleish_comma+1:] ) )
