@@ -1,10 +1,14 @@
 #!/bin/bash
 cd $BASEDIR
-export TMPDIR=$BASEDIR/logs/
-export WIKIARTICLE=$1
-export VOICE=train_winston
-export TORTOISE_MODELS_DIR=$BASEDIR/models
+TMPDIR=$BASEDIR/logs/
+WIKIARTICLE=$1
+VOICE=jmm5
+MODEL=insert_me
+CVVP=1.0
+DESTINATION=insert_me
+OTHERPARAMS="--original_tortoise True --vocoder BigVGAN --preset=high_quality"
 mkdir $BASEDIR/outputs/$WIKIARTICLE
-tsp sh -c "python3.9 $BASEDIR/tortoise-tts/tortoise/read.py --model_dir $BASEDIR/models --textfile $BASEDIR/inputs/$WIKIARTICLE/$WIKIARTICLE.txt --voice $VOICE --preset=fast --output_path=$BASEDIR/outputs/$WIKIARTICLE > /$BASEDIR/logs/$WIKIARTICLE.log 2>&1"
-tsp -d sh -c 'ffmpeg -i $BASEDIR/outputs/$WIKIARTICLE/$VOICE/combined.wav $BASEDIR/outputs/$WIKIARTICLE/$VOICE/$WIKIARTICLE.mp3 -metadata title="Wikipedia article on $WIKIARTICLE read by a text to speech voice, content CC-BY-SA see https://github.com/xenotropic/wikipedia-tts/ for more info" >> /$BASEDIR/logs/$WIKIARTICLE.log 2>&1' 
-tsp -d sh -c 'scp $BASEDIR/outputs/$WIKIARTICLE/$VOICE/$WIKIARTICLE.mp3 joe@dune:www/wcast.me/tts/'
+python3.9 ~/tts/tortoise-tts-fast/scripts/tortoise_tts.py --voice=$VOICE  --output_dir=$BASEDIR/outputs/$WIKIARTICLE --cvvp_amount $CVVP --voicefixer False $OTHERPARAMS --ar_checkpoint=$MODEL <  $BASEDIR/inputs/$WIKIARTICLE/$WIKIARTICLE.txt && ffmpeg-normalize $BASEDIR/outputs/$WIKIARTICLE/${VOICE}_combined.wav -c:a mp3 -t -16 -pr -o $BASEDIR/outputs/$WIKIARTICLE/$WIKIARTICLE.mp3 && scp $BASEDIR/outputs/$WIKIARTICLE/$WIKIARTICLE.mp3 $DESTINATION
+cat >> $TMPDIR/metalog "$WIKIARTICLE, $VOICE, $MODEL, $CCVP, $OTHERPARAMS"
+
+
