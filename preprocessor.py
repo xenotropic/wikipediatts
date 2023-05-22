@@ -1,8 +1,7 @@
-import sys, re, csv, os
+import sys, re, csv, os, roman
 from unidecode import unidecode
 
 nemo_on = True #often skip this for debugging because it is slow
-
 
 from nemo_text_processing.text_normalization.normalize import Normalizer
 normalizer = None
@@ -31,14 +30,15 @@ def do_headings (text):
     output = ""
     for line in lines:
         if re.match (heading_pattern, line):
-            output = output + "==" + "[Announcing] Main heading " + str (heading_counter) + ", "  +  line[2:] + " .\n"
+            output = output + "==" + "[Announcing] Main heading " + str (heading_counter) + ", "  +  line[2:] + " [period] .\n "
             heading_counter += 1
         elif re.match (subheading_pattern, line):
             index = 0  # could be three or four depending on level
             while index < len(line) and line[index] == '=':
                 index += 1
-            output = output + line[:index] + "[Announcing] Subheading, "+ line[index:] + " .\n"
+            output = output + line[:index] + "[Announcing] Subheading, "+ line[index:] + "[period] .\n "
         else: output = output + line + "\n"
+    output = re.sub ("=[=]+", "", output)
     return output
 
 def remove_boring_end(text):
@@ -74,7 +74,7 @@ digits = "([0-9])"
 
 def gh_sentences(text):
     text = " " + text + "  "
-    text = re.sub('==*', '.', text) # wikipedia headers
+#    text = re.sub('==*', '.', text) # wikipedia headers
     text = text.replace("\n",".")
     text = text.replace("-"," ")
     text = re.sub(prefixes,"\\1<prd>",text)
@@ -141,14 +141,6 @@ def get_middle_comma (sentence):
 
     return nearest_comma_index
 
-'''
-def get_middle_comma (text): # for sentences that are still over 390 chars after splitting
-    commas = [ind for ind, ch in enumerate(text) if ch.lower() == ','];
-    if commas == []:
-        commas = [ind for ind, ch in enumerate(text) if ch.lower() == ' '];
-    comma_candidate = commas [ len ( commas ) // 2 ]
-    return 
-'''
 
 def date_ranges (matchobj):
     text = matchobj.group(0)
@@ -234,6 +226,24 @@ def clause_split ( matchobj ):
     text = text.replace(",",".")
     return text
 
+def make_ordinal(n):
+
+    n = int(n)
+    if 11 <= (n % 100) <= 13:
+        suffix = 'th'
+    else:
+        suffix = ['th', 'st', 'nd', 'rd', 'th'][min(n % 10, 4)]
+    return str(n) + suffix
+
+def monarch_replace ( matchobj ):
+    text = matchobj.group(0)
+    if ( "Malcolm" in text ): return text;
+    name = re.search ('[A-Z][a-z]+ ', text).group(0)
+    roman_n = re.search ('[XIV][XIV]+', text).group(0)
+    int_n = roman.fromRoman ( roman_n )
+    ord_n = make_ordinal ( int_n )
+    return name + "the " + ord_n
+
 #since there will be a lot of these
 def template_method ( matchobj ):
     text = matchobj.group(0)
@@ -266,6 +276,7 @@ def preprocess (text):
     text = re.sub('\([bd][.] ?[0-9]+\)', birth_death_dates, text)
     text = re.sub('#[0-9][0-9]*', ordinal_replace, text)
     text = re.sub('\$[0-9.]* ?[bmtz]illion', money_replace, text)
+    text = re.sub('[A-Z][a-z]+ [XIV][XIV]+', monarch_replace, text)
     text = re.sub('\([0-9][0-9]?[0-9]?[0-9]?[ADBC ]*[-][0-9][0-9]?[0-9]?[0-9]?[ADBC ]*\)', date_ranges, text) 
     text = re.sub('(\d)[-](\d)', r'\1 to \2' , text) #number ranges, maybe I don't need the method below
     text = re.sub('[,0-9]+[-][0-9,]+', number_ranges, text)
@@ -290,11 +301,14 @@ def preprocess (text):
         sen = sen.replace(")",",")
         sen = sen.replace(",,",",")
         sen = sen.replace(" ,",", ")
+        sen = sen.replace("[period]",".")
+        sen = sen.replace(" .|",".|")
         sen = sen.strip()
         if ( len (sen) < 3 ): continue #these are stubs often just a period
         if ( len (sen) > 320 ):
             middleish_comma = get_middle_comma ( sen )
             sentences_out.append ( normalize_local ( sen[:middleish_comma] ) )
             sentences_out.append ( normalize_local ( sen[middleish_comma+1:] ) )
-        else: sentences_out.append ( normalize_local  ( sen ) )        
+        else: sentences_out.append ( normalize_local  ( sen ) )
+    
     return sentences_out
