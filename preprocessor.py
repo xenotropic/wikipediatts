@@ -30,13 +30,13 @@ def do_headings (text):
     output = ""
     for line in lines:
         if re.match (heading_pattern, line):
-            output = output + "==" + "[Announcing] Main heading " + str (heading_counter) + ", "  +  line[2:] + " [period] .\n "
+            output = output + "==" + "Main heading " + str (heading_counter) + ", "  +  line[2:] + " [period] .\n "
             heading_counter += 1
         elif re.match (subheading_pattern, line):
             index = 0  # could be three or four depending on level
             while index < len(line) and line[index] == '=':
                 index += 1
-            output = output + line[:index] + "[Announcing] Subheading, "+ line[index:] + "[period] .\n "
+            output = output + line[:index] + "Subheading, "+ line[index:] + "[period] .\n "
         else: output = output + line + "\n"
     output = re.sub ("=[=]+", "", output)
     return output
@@ -156,7 +156,6 @@ def number_ranges (matchobj):
     text = text.replace("—"," to ")
     return text
     
-#Taking out Nemo for now, it is slow, dependencies are difficult
 def normalize_local ( text ):
     if nemo_on:
         return  normalizer.normalize (text, verbose=False, punct_post_process=True)
@@ -223,7 +222,7 @@ def circas ( matchobj ):
 
 def clause_split ( matchobj ):
     text = matchobj.group(0)
-    text = text.replace(",",".")
+    text = text.replace(",",",<stop>")
     return text
 
 def make_ordinal(n):
@@ -237,18 +236,28 @@ def make_ordinal(n):
 
 def monarch_replace ( matchobj ):
     text = matchobj.group(0)
-    if ( "Malcolm" in text ): return text;
+    if ( "Malcolm X" in text ): return text; # Brother Malcolm is not the tenth
     name = re.search ('[A-Z][a-z]+ ', text).group(0)
-    roman_n = re.search ('[XIV][XIV]+', text).group(0)
+    roman_n = re.search (' [XIV]+[ ,.]', text).group(0).strip()
+    roman_n = roman_n.replace (",","")
+    roman_n = roman_n.replace (".","")
+    if ( len ( roman_n ) == 1 ): print("Verify monarch:" + text , file=sys.stderr) # low confidence with single digit, could be something else
     int_n = roman.fromRoman ( roman_n )
     ord_n = make_ordinal ( int_n )
-    return name + "the " + ord_n
+    return name + "the " + ord_n + text[-1]
 
 #since there will be a lot of these
 def template_method ( matchobj ):
     text = matchobj.group(0)
     return text
 
+# Nemo text processing, turns 830s into eight hundred and thirty S, its bug report #72
+
+def decade_pluralfix ( matchobj ):
+    text = matchobj.group(0)
+    text = text.replace ("ty S ", "ties ")
+    text = text.replace ("ten S ", "tens ")
+    return text
 
 def preprocess (text):
     text = remove_boring_end (text)
@@ -262,7 +271,6 @@ def preprocess (text):
     text = text.replace("–","-")
     text = text.replace(" "," ")
     text = bulk_replace (text) 
-    #print ( text, file=sys.stderr )
     text = re.sub(': ?[0-9]+-[0-9]+', '', text)  # Wikipedia pincites
     text = re.sub(':[ ]?[0-9]+', '', text)  # Wikipedia pincites
     text = unidecode (text)
@@ -276,7 +284,7 @@ def preprocess (text):
     text = re.sub('\([bd][.] ?[0-9]+\)', birth_death_dates, text)
     text = re.sub('#[0-9][0-9]*', ordinal_replace, text)
     text = re.sub('\$[0-9.]* ?[bmtz]illion', money_replace, text)
-    text = re.sub('[A-Z][a-z]+ [XIV][XIV]+', monarch_replace, text)
+    text = re.sub('[A-Z][a-z]+ [XIV]+[ ,.]', monarch_replace, text)
     text = re.sub('\([0-9][0-9]?[0-9]?[0-9]?[ADBC ]*[-][0-9][0-9]?[0-9]?[0-9]?[ADBC ]*\)', date_ranges, text) 
     text = re.sub('(\d)[-](\d)', r'\1 to \2' , text) #number ranges, maybe I don't need the method below
     text = re.sub('[,0-9]+[-][0-9,]+', number_ranges, text)
@@ -291,9 +299,9 @@ def preprocess (text):
     sentences_out = []
     for sen in sentences_in:
         sen = re.sub ('[A-Z][A-Z]*', acronym_split, sen)
-        sen = sen.replace("."," ") # this are going to be stuff like degrees, initials, etc at this point
-        sen = sen.replace(":"," ") # colons and semicolons were already used to do sentence breaks 
-        sen = sen.replace(";"," ") 
+        sen = sen[:-3].replace("."," ") + sen[-3:] # this are going to be stuff like degrees, initials, etc at this point. Leaving terminating periods. 
+        # sen = sen.replace(":"," ") # colons and semicolons were already used to do sentence breaks 
+        # sen = sen.replace(";"," ") 
         sen = sen.replace("/"," ") 
         sen = sen.replace("+"," ") 
         sen = sen.replace("*"," ")
@@ -302,13 +310,30 @@ def preprocess (text):
         sen = sen.replace(",,",",")
         sen = sen.replace(" ,",", ")
         sen = sen.replace("[period]",".")
-        sen = sen.replace(" .|",".|")
+        sen = sen.replace("-",",")
+        sen = sen.replace(" . .",".") # mystified where these came from
+        sen = sen.replace(" ...",".")
+        sen = sen.replace("  "," ")
+        # sen = sen.replace(" .|",".|")
         sen = sen.strip()
         if ( len (sen) < 3 ): continue #these are stubs often just a period
-        if ( len (sen) > 320 ):
+        if ( len (sen) > 270 ):  # this sets softmax on sentence length (longer may exist if couldn't be broken up)
             middleish_comma = get_middle_comma ( sen )
             sentences_out.append ( normalize_local ( sen[:middleish_comma] ) )
             sentences_out.append ( normalize_local ( sen[middleish_comma+1:] ) )
-        else: sentences_out.append ( normalize_local  ( sen ) )
-    
+        else: sentences_out.append ( normalize_local  ( sen )  )
+    sentences_in = sentences_out
+    sentences_out = []
+    senbuffer = ""
+    lengthcount = 0
+    while len ( sentences_in ) > 0:
+        sen = sentences_in.pop(0)
+        if len ( senbuffer ) + len ( sen ) > 270:
+            senbuffer = re.sub ("hundred and (ten|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety) [Ss] ", decade_pluralfix, senbuffer)
+            senbuffer = senbuffer.replace ("thousand and ten S", "thousand tens")
+            sentences_out.append ( senbuffer )
+            senbuffer = sen
+        else: senbuffer = senbuffer + sen
+    if  len (senbuffer) > 0  : sentences_out.append ( senbuffer )
     return sentences_out
+
